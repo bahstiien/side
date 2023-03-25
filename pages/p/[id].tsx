@@ -9,8 +9,24 @@ import Layout from '../../components/Layout';
 import { PostProps } from '../../components/Post';
 import { useSession } from 'next-auth/react';
 import prisma from '../../lib/prisma';
+import { GetServerSidePropsContext } from 'next';
+import { ParsedUrlQuery } from 'querystring';
 
-export const getServerSideProps: GetServerSideProps = async ({ params }) => {
+  type Author = {
+    name: string | null;
+    email: string | null;
+  };
+  
+  type Post = {
+    title: string;
+    content: string;
+    author: Author;
+    published: boolean;
+    id: string;
+  };
+  
+  
+export const getServerSideProps: any = async ({ params } :any) => {
   const post = await prisma.post.findUnique({
     where: {
       id: String(params?.id),
@@ -27,10 +43,10 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
 };
 
 async function publishPost(id: string): Promise<void> {
-    await fetch(`/api/publish/${id}`, {
-        method: 'PUT',
-    });
-    await Router.push('/');
+  await fetch(`/api/publish/${id}`, {
+    method: 'PUT',
+  });
+  await Router.push('/');
 }
 
 async function deletePost(id: string): Promise<void> {
@@ -40,6 +56,8 @@ async function deletePost(id: string): Promise<void> {
     Router.push('/');
   }
 
+  
+
 const Post: React.FC<PostProps> = (props) => {
   const { data: session, status } = useSession();
   if (status === 'loading') {
@@ -48,15 +66,8 @@ const Post: React.FC<PostProps> = (props) => {
   const userHasValidSession = Boolean(session);
   const postBelongsToUser = session?.user?.email === props.author?.email;
   let title = props.title;
-  {
-    !props.published && userHasValidSession && postBelongsToUser && (
-      <button onClick={() => publishPost(props.id)}>Publish</button>
-    );
-  }
-  {
-    userHasValidSession && postBelongsToUser && (
-      <button onClick={() => deletePost(props.id)}>Delete</button>
-    );
+  if (!props.published) {
+    title = `${title} (Draft)`;
   }
 
   return (
@@ -65,10 +76,11 @@ const Post: React.FC<PostProps> = (props) => {
         <h2>{title}</h2>
         <p>By {props?.author?.name || 'Unknown author'}</p>
         <ReactMarkdown children={props.content} />
-        {!props.published && userHasValidSession && postBelongsToUser && (
-          <button onClick={() => publishPost(props.id)}>Publish</button>
-        )}
-
+        {
+  !props.published && userHasValidSession && postBelongsToUser && (
+    <button onClick={() => publishPost(props.id)}>Publish</button>
+  )
+}
 {
   userHasValidSession && postBelongsToUser && (
     <button onClick={() => deletePost(props.id)}>Delete</button>
@@ -99,10 +111,5 @@ const Post: React.FC<PostProps> = (props) => {
     </Layout>
   );
 };
-
-
-
-  
-
 
 export default Post;
